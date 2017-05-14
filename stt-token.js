@@ -10,8 +10,8 @@ var watson = require('watson-developer-cloud');
 var sttConfig = {
   version: 'v1',
   url: 'https://stream.watsonplatform.net/speech-to-text/api',
-  username: "4e3153cb-3011-4179-8dcc-a1be03bc12da",
-  password: "Qf5WVYhQ7Jsf"
+  username: "34255128-ac8a-4d52-ba24-82c0936c8785",
+  password: "6AFHNwp36QTo"
 };
 
 var sttAuthService = watson.authorization(sttConfig);
