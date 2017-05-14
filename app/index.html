@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.5.0.min.js"></script>
+  <script src="js/watson-speech.min.js"></script>
+  <!-- window.fetch pollyfill for IE/Edge & Older Chrome/FireFox -->
+  <script src="js/fetch.js"></script>
+  <script src="js/jquery.min.js"></script>
+  <style media="screen">
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    button {
+      width: 128px;
+      height: 128px;
+      text-align: center;
+      vertical-align: middle;
+      border-radius: 64px;
+      border: 0;
+      background-color: #089e00;
+      color: #ffffff;
+      font-size: 24px;
+      text-shadow: 1px 1px 1px #666;
+    }
+
+    button:hover {
+
+    }
+  </style>
+</head>
+<body>
+  <h1>Blah Blah... Ah!</h1>
+
+  <button type="button" class="js-action" data-controller="stt">Send!</button>
+
+
+<script>
+(function() {
+  'use strict';
+
+  // Watson speech stream
+  var stream;
+
+  // The words that Watson was able to identify, and which we will pass on to PubNub
+  var watsonSTTData;
+
+  // PubNub configurations
+  const msgChannel   = 'translateChat';
+  const audioChannel = 'textToSpeechChat';
+
+  const pn = new PubNub({
+    publishKey: 'pub-c-51d2b1d8-9945-45ca-a922-692c3923925c',
+    subscribeKey: 'sub-c-bffe1c40-3814-11e7-887b-02ee2ddab7fe',
+    ssl: true
+  });
+
+  const publish = function() {
+    pn.publish({
+      channel: msgChannel,
+      message: { text: watsonSTTData }
+    });
+  };
+
+  const publishTranslation = function(payload){
+    pn.publish({
+      channel: audioChannel,
+      message: { text: payload.message.text_es }
+    });
+  };
+
+  const controllers = {
+    stt($event){
+      $($event.currentTarget).data('controller', 'stop');
+      $($event.currentTarget).text('Stop');
+
+      fetch('/api/speech-to-text/token')
+        .then(function(response) {
+          return response.text();
+        })
+        .then(function (token) {
+
+          stream = WatsonSpeech.SpeechToText.recognizeMicrophone({
+            token: token,
+            object_mode: false // default
+          });
+
+          stream.setEncoding('utf8'); // get text instead of Buffers for on data events
+
+          stream.on('data', function(data) {
+            watsonSTTData = data;
+          });
+
+          stream.on('error', function(err) {
+            console.log(err);
+          });
+
+        })
+        .catch(function(error) {
+          console.log(error);
+        });
+    },
+    stop($event){
+      $($event.currentTarget).data('controller', 'processing');
+      $($event.currentTarget).text('Processing');
+
+      stream.stop();
+
+      publish();
+
+      // watsonSTTData = '';
+    }
+  };
+
+  $(document).on('click', '.js-action', function($event){
+    const controller = $($event.currentTarget).data('controller');
+
+    ( controllers[controller] ? controllers[controller] : function(){} )( $event );
+  });
+
+  var msgCallback = function(payload) {
+    switch(payload.channel){
+      case 'textToSpeechChat':
+        var speech = new Audio();
+        speech.src = payload.message.speech;
+        speech.play();
+
+        $(speech).on('ended', function($event){
+          $('.js-action').data('controller', 'stt');
+          $('.js-action').text('Send');
+        });
+
+        break;
+
+      case 'translateChat':
+        publishTranslation(payload);
+
+        break;
+
+      default: console.error('unknown');
+    }
+  };
+
+  pn.subscribe({ channels: [ msgChannel, audioChannel ] });
+  pn.addListener({ message: msgCallback });
+}());
+</script>
+</body>
+</html>
