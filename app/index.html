@@ -106,6 +106,13 @@
     });
   };
 
+  const langMap = {
+    "en": "en-US_BroadbandModel",
+    "es": "es-ES_BroadbandModel",
+    "fr": "fr-FR_BroadbandModel",
+    "pt": "pt-BR_BroadbandModel"
+  };
+
   const controllers = {
     stt($event){
       $($event.currentTarget).data('controller', 'stop');
@@ -119,6 +126,7 @@
 
           stream = WatsonSpeech.SpeechToText.recognizeMicrophone({
             token: token,
+            model: langMap[$('select[name="from_language"]').val()],
             object_mode: false // default
           });
 
