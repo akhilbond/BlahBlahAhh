@@ -24,15 +24,45 @@
       text-shadow: 1px 1px 1px #666;
     }
 
-    button:hover {
+    .container {
+      width: 50%;
+      margin: auto;
+      text-align: center;
+    }
 
+    select {
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <h1>Blah Blah... Ah!</h1>
+  <article class="container">
+    <h1>Blah Blah... Ahh!</h1>
 
-  <button type="button" class="js-action" data-controller="stt">Send!</button>
+    <p>
+      <label>
+        <span>From: </span>
+        <select name="from_language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="pt">Português</option>
+        </select>
+      </label>
+
+      <label>
+        <span>To: </span>
+        <select name="to_language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="pt">Português</option>
+        </select>
+      </label>
+    </p>
+
+    <button type="button" class="js-action" data-controller="stt">Send!</button>
+</article>
 
 
 <script>
@@ -58,14 +88,21 @@
   const publish = function() {
     pn.publish({
       channel: msgChannel,
-      message: { text: watsonSTTData }
+      message: {
+        text: watsonSTTData,
+        src_lang: $('select[name="from_language"]').val(),
+        tgt_lang: $('select[name="to_language"]').val()
+      }
     });
   };
 
   const publishTranslation = function(payload){
     pn.publish({
       channel: audioChannel,
-      message: { text: payload.message.text_es }
+      message: {
+        text: payload.message['text_' + payload.message.tgt_lang],
+        lang: payload.message.tgt_lang
+      }
     });
   };
 
@@ -118,6 +155,22 @@
     ( controllers[controller] ? controllers[controller] : function(){} )( $event );
   });
 
+  $(document).on('change', 'select', function($event){
+    switch($event.target.name){
+      case 'from_language':
+        if($($event.target).val() !== 'en'){
+          $('select[name="to_language"]').val('en').prop('disabled', true);
+        } else {
+          $('select[name="to_language"]').prop('disabled', false);
+        }
+
+        break;
+
+      case 'to_language': console.log('to'); break;
+      default: break;
+    }
+  });
+
   var msgCallback = function(payload) {
     switch(payload.channel){
       case 'textToSpeechChat':
@@ -127,7 +180,7 @@
 
         $(speech).on('ended', function($event){
           $('.js-action').data('controller', 'stt');
-          $('.js-action').text('Send');
+          $('.js-action').text('Send!');
         });
 
         break;
